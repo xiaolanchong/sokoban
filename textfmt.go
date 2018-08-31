@@ -6,15 +6,15 @@ import (
 )
 
 const (
-	Wall  = 'x'
-	Crate = 'o'
-	Slot  = '.'
-	Keeper = 'A'
+	Wall  = '#'
+	Crate = 'O'
+	Slot  = 'X'
+	Keeper = '@'
 	Empty = ' '
 )
 
-func BuildTextRoom(reader io.Reader) (room, error) {
-	rb := NewBuilder()
+func BuildTextStage(reader io.Reader) (stage, error) {
+	sb := NewBuilder()
 	buf := make([]byte, 1)
 	currentPos := Coord{0, 0}
 	for {
@@ -24,26 +24,27 @@ func BuildTextRoom(reader io.Reader) (room, error) {
 		}
 		switch buf[0] {
 		case Wall:
-			rb.AddWall(currentPos)
+			sb.AddWall(currentPos)
 			currentPos.x += 1
 		case Crate:
-			rb.AddCrate(currentPos)
+			sb.AddCrate(currentPos)
 			currentPos.x += 1
 		case Slot:
-			rb.AddSlot(currentPos)
+			sb.AddSlot(currentPos)
 			currentPos.x += 1
 		case Keeper:
-			rb.SetKeeper(currentPos)
+			sb.SetKeeper(currentPos)
 			currentPos.x += 1
 		case Empty:
+			sb.AddSpace(currentPos)
 			currentPos.x += 1
 		case '\n':
 			currentPos.x = 0
 			currentPos.y += 1
 		default:
-			return room{}, fmt.Errorf("Unexpected char: %v", buf[0])
+			return stage{}, fmt.Errorf("Unexpected char: %v", buf[0])
 		}
 	}
 
-	return rb.Finish()
+	return sb.Finish()
 }

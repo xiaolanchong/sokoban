@@ -21,9 +21,9 @@ func main() {
 		return
 	}
 	
-	_, err = BuildTextRoom(f)
+	_, err = BuildTextStage(f)
 	if err != nil {
-		fmt.Printf("Cannot create room: %v\n", err)
+		fmt.Printf("Cannot create stage: %v\n", err)
 		return
 	}
 }
