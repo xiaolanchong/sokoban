@@ -41,8 +41,9 @@ func BuildTextStage(reader io.Reader) (stage, error) {
 		case '\n':
 			currentPos.x = 0
 			currentPos.y += 1
+		case '\r':
 		default:
-			return stage{}, fmt.Errorf("Unexpected char: %v", buf[0])
+			return stage{}, fmt.Errorf("Unexpected char: %x, position: %v", buf, currentPos)
 		}
 	}
 

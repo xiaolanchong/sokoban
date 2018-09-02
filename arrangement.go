@@ -19,8 +19,8 @@ const (
 type Box struct {
 	left	CoordUnit
 	top		CoordUnit
-	right	CoordUnit
-	bottom	CoordUnit
+	right	CoordUnit  // rigtest position
+	bottom	CoordUnit  // lowest position of an entity
 }
 
 type Arrangement struct {
@@ -39,22 +39,22 @@ func moveWithinBox(pos Coord, bound Box, direction Direction) (Coord, error) {
 	switch direction {
 	case DirLeft:
 		if pos.x <= bound.left {
-			return Coord{}, fmt.Errorf("Hit the left bound at %v", bound.left)
+			return Coord{}, fmt.Errorf("Hit the left bound %v at %v", bound.left, pos)
 		}
 		dx, dy = -1, 0
 	case DirRight:
-		if pos.x+1 >= bound.right {
-			return Coord{}, fmt.Errorf("Hit the right bound at %v", bound.right)
+		if pos.x >= bound.right {
+			return Coord{}, fmt.Errorf("Hit the right bound %v at %v", bound.right, pos)
 		}
 		dx, dy = 1, 0
 	case DirUp:
 		if pos.y <= bound.top {
-			return Coord{}, fmt.Errorf("Hit the top bound at %v", bound.top)
+			return Coord{}, fmt.Errorf("Hit the top bound %v at %v", bound.top, pos)
 		}
 		dx, dy = 0, -1
 	case DirDown:
-		if pos.y+1 >= bound.bottom {
-			return Coord{}, fmt.Errorf("Hit the bottom bound at %v", bound.bottom)
+		if pos.y >= bound.bottom {
+			return Coord{}, fmt.Errorf("Hit the bottom bound %v at %v", bound.bottom, pos)
 		}
 		dx, dy = 0, 1
 	default:
@@ -138,6 +138,23 @@ func (a Arrangement) Move(warehouse Warehouse, direction Direction) (Arrangement
 	}
 }
 
+func isCrateStuckInCorner(warehouse Warehouse, arrangement Arrangement, slots Entities) bool {
+	for cratePos, _ := range arrangement.crates {
+		if _, slotExists := slots[cratePos]; slotExists {
+			continue         // crate in a slot, no stucking
+		}
+		canMoveInPrevDir := true
+		for _, dir := range []Direction {DirLeft, DirUp, DirRight, DirDown, DirLeft} {
+			_, err := moveWithinWalls(cratePos, warehouse, dir)
+			if !canMoveInPrevDir && err != nil {
+				return true
+			}
+			canMoveInPrevDir = (err == nil)
+		}
+	}
+	return false
+}
+
 // Checks the arrangement is terminal, i.e. no crate can be moved vertically or horizontally
 func IsStuck(w Warehouse, a Arrangement) bool {
 	for k, _ := range a.crates {
@@ -146,15 +163,17 @@ func IsStuck(w Warehouse, a Arrangement) bool {
 			_, err := moveWithinWallsAndCrates(k, w, a.crates, dir)
 			canMoveInDirection[dir] = (err == nil)
 		}
-		//fmt.Println("canMoveInDirection: ", k, canMoveInDirection)
 		canMoveHorz := canMoveInDirection[0] && canMoveInDirection[1]
 		canMoveVert := canMoveInDirection[2] && canMoveInDirection[3]
 		if canMoveVert || canMoveHorz {
-			//fmt.Println("canMoveVert: ", canMoveHorz, canMoveVert)
 			return false
 		}
 	}
 	return true
+}
+
+func IsStuckExt(warehouse Warehouse, arrangement Arrangement, slots Entities) bool {
+	return isCrateStuckInCorner(warehouse, arrangement, slots)
 }
 
 func IsSolved(a Arrangement, slots Entities) (bool, error) {

@@ -15,15 +15,21 @@ func main() {
 	}
 	
 	var f io.Reader
-	f, err = os.Open(os.Args[0])
+	f, err = os.Open(os.Args[1])
 	if err != nil {
 		fmt.Printf("Cannot open '%s': %v\n", os.Args[0], err)
 		return
 	}
 	
-	_, err = BuildTextStage(f)
+	var st stage
+	st, err = BuildTextStage(f)
 	if err != nil {
 		fmt.Printf("Cannot create stage: %v\n", err)
 		return
 	}
+	
+	tf, _ := NewTermFeedback(st.warehouse, st.slots)
+	defer tf.Close()
+	//Solve(st.warehouse, st.arrangement, st.slots, tf)
+	SolveWithPathfinding(st.warehouse, st.arrangement, st.slots, tf)
 }

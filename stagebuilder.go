@@ -45,7 +45,7 @@ func (sb *stageBuilder) adjustRect(c Coord) {
 		sb.box.top = c.y
 	}
 
-	inflated := Coord{c.x + 1, c.y + 1}
+	inflated := Coord{c.x, c.y}
 	if sb.box.right < inflated.x {
 		sb.box.right = inflated.x
 	}

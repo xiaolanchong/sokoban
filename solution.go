@@ -38,14 +38,19 @@ func goUpTree(start *SolutionNode) Solution {
 
 type VisitedArrangements = map[string]uint32
 type Solutions = []Solution
+type IFeedback interface {
+	Render(arr Arrangement)
+}
 
 func solveRecursively(node *SolutionNode, warehouse Warehouse, arr Arrangement, 
-					slots Entities, visited VisitedArrangements, allSolutions *Solutions, stepNumber uint32) error {
-	//fmt.Printf("Path: %v\n", goUpTree(node))
+					slots Entities, visited VisitedArrangements, allSolutions *Solutions, stepNumber uint32, feedback IFeedback) error {
 
+	if feedback != nil {
+		feedback.Render(arr)
+	}
+	
 	hash := arr.GetMd5Hash()
 	if value, exists := visited[hash]; exists {
-	//	fmt.Printf("Already visited\n")
 		if stepNumber < value {
 			visited[hash] = stepNumber
 		} else {
@@ -54,7 +59,7 @@ func solveRecursively(node *SolutionNode, warehouse Warehouse, arr Arrangement,
 	} else {
 		visited[hash] = stepNumber
 	}
-
+	
 	solved, err := IsSolved(arr, slots)
 	if err != nil {
 		return err
@@ -62,9 +67,7 @@ func solveRecursively(node *SolutionNode, warehouse Warehouse, arr Arrangement,
 	if solved {
 		solution := goUpTree(node)
 		newSolution := append(*allSolutions, solution)
-		//copy(*allSolutions, newSolution)
 		*allSolutions = newSolution
-		//fmt.Printf("Solution found, len: %v\n", len(solution))
 		return fmt.Errorf("Halted because a solution found")
 	}
 	if IsStuck(warehouse, arr) {
@@ -76,50 +79,33 @@ func solveRecursively(node *SolutionNode, warehouse Warehouse, arr Arrangement,
 	var child *SolutionNode
 	stepNumber += 1
 	
-	child = &SolutionNode{node, nil, nil, nil, nil}
-	node.left = child
-	nextArr, errArr = arr.Move(warehouse, DirLeft)
-	if errArr == nil {
-		if err := solveRecursively(child, warehouse, nextArr, slots, visited, allSolutions, stepNumber); err == nil {
-			//return solution, nil
+	loop := []struct { 
+		dir			Direction 
+		childToGo	**SolutionNode
+	} { 
+		{DirLeft,  &node.left},
+		{DirRight, &node.right},
+		{DirUp,    &node.up},
+		{DirDown,  &node.down},
+	}
+
+	for _, value := range loop {
+		child = &SolutionNode{node, nil, nil, nil, nil}
+		*value.childToGo = child
+		nextArr, errArr = arr.Move(warehouse, value.dir)
+		if errArr == nil {
+			solveRecursively(child, warehouse, nextArr, slots, visited, allSolutions, stepNumber, feedback)
 		}
 	}
-	
-	child = &SolutionNode{node, nil, nil, nil, nil}
-	node.right = child
-	nextArr, errArr = arr.Move(warehouse, DirRight)
-	if errArr == nil {
-		if err := solveRecursively(child, warehouse, nextArr, slots, visited, allSolutions, stepNumber); err == nil {
-			//return solution, nil
-		}
-	}
-	
-	child = &SolutionNode{node, nil, nil, nil, nil}
-	node.up = child
-	nextArr, errArr = arr.Move(warehouse, DirUp)
-	if errArr == nil {
-		if err := solveRecursively(child, warehouse, nextArr, slots, visited, allSolutions, stepNumber); err == nil {
-			//return solution, nil
-		}
-	}
-	
-	child = &SolutionNode{node, nil, nil, nil, nil}
-	node.down = child
-	nextArr, errArr = arr.Move(warehouse, DirDown)
-	if errArr == nil {
-		if err := solveRecursively(child, warehouse, nextArr, slots, visited, allSolutions, stepNumber); err == nil {
-			//return solution, nil
-		}
-	}
-	
+
 	return fmt.Errorf("All branches traversed")
 }
 
-func Solve(warehouse Warehouse, arr Arrangement, slots Entities) (Solution, error) {
+func Solve(warehouse Warehouse, arr Arrangement, slots Entities, feedback IFeedback) (Solution, error) {
 	visited := make(VisitedArrangements)
 	root := &SolutionNode{}
 	allSolutions := Solutions{}
-	solveRecursively(root, warehouse, arr, slots, visited, &allSolutions, 0)
+	solveRecursively(root, warehouse, arr, slots, visited, &allSolutions, 0, feedback)
 	if len(allSolutions) != 0 {
 		//fmt.Printf("%v", allSolutions)
 		fmt.Printf("Solution number=%v\n", len(allSolutions))
@@ -134,18 +120,23 @@ func Solve(warehouse Warehouse, arr Arrangement, slots Entities) (Solution, erro
 	return nil, fmt.Errorf("No solution found")
 }
 
-func SolutionToString(solution Solution) string {
-	path := ""
-	for _, v := range solution {
-		var dirStr string
-		switch v {
-			case DirLeft:  dirStr = "<"
-			case DirRight: dirStr = ">"
-			case DirUp:    dirStr = "^"
-			case DirDown:  dirStr = "_"
-			default:       dirStr = "X"
-		}
-		path = path + dirStr
+func DirectionToString(direction Direction) string {
+	var dirStr string
+	switch direction {
+		case DirLeft:  dirStr = "<"
+		case DirRight: dirStr = ">"
+		case DirUp:    dirStr = "^"
+		case DirDown:  dirStr = "_"
+		default:       dirStr = "X"
 	}
-	return path
+	return dirStr
+}
+
+func PathToString(path []Direction) string {
+	pathStr := ""
+	for _, v := range path {
+		dirStr := DirectionToString(v)
+		pathStr = pathStr + dirStr
+	}
+	return pathStr
 }
